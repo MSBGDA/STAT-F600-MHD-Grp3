@@ -56,6 +56,23 @@ for (i in 1:n){
 
 # PART mean vector test Tn ----
 
-my_data <- read.delim(file.choose(), sep ="", header = FALSE, dec =".") #Choose the file 
+#my_data <- read.delim(file.choose(), sep ="", header = FALSE, dec =".") #Choose the file 
 
+my_data <- matrix(scan(file = FilePath),ncol=p,byrow=TRUE) #import data from file
 
+Z <- matrix(, nrow = n, ncol = p) #create empty matrix to fill with the vectors Zi
+
+for (i in 1:n){
+  #matrix with the vector Zi. Each row is a vector of p components
+  Z[i,] <- my_data[i,] / norm(my_data[i,], type= '2')
+}
+
+Test_n <- function(x){
+  Tn <- 0               
+  for (i in 2:n){
+    for (j in 1:(i-1)){
+      Tn <- Tn + Z[i,] %*% Z[j,]
+  return(Tn)
+    }
+  }
+}
