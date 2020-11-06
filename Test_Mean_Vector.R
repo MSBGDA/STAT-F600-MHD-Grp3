@@ -60,7 +60,7 @@ for (i in 1:n){
 
 my_data <- matrix(scan(file = FilePath),ncol=p,byrow=TRUE) #import data from file
 
-Z <- matrix(, nrow = n, ncol = p) #create empty matrix to fill with the vectors Zi
+Z <- matrix(0, nrow = n, ncol = p) #create empty matrix to fill with the vectors Zi
 
 for (i in 1:n){
   #matrix with the vector Zi. Each row is a vector of p components
@@ -76,3 +76,46 @@ Test_n <- function(x){
     }
   }
 }
+
+# PART Monte Carlo Simulation ----
+
+n <- 3                                 #size vector
+p <- 6                                #dimension vector (multiple of 3)
+
+mu0 <- rep(0, p)
+mu1 <- rep(0.25, p)
+mu2 <- c(rep(0, p %/% 3), rep(0.25, p %/% 3), rep(-0.25, p %/% 3))
+
+Sigma1 <- 'diag<-'(matrix(0.2, p, p), 1)
+
+Sigma2 <- matrix(0 , nrow = p, ncol = p)
+for (i in 1:p){
+  for (j in 1:p){
+    Sigma2[i, j] <- 0.8 ** abs(i - j)
+  }
+}
+
+D <- matrix(0 , nrow = p, ncol = p)
+for (i in 1:p){
+  D[i, i] <- 2 + (p - i + 1) / p
+}
+R <- matrix(0 , nrow = p, ncol = p)
+for (i in 1:p){
+  for (j in 1:p){
+    R[i, j] <- (-1) ** (i + j) * (0.2) ** (abs(i - j) ** (0.1))
+  }
+}
+Sigma3 <- D %*% R %*% D
+
+Data_generator_Ex1 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
+  Data_matrix <- matrix(0, nrow = n, ncol = p)
+  for (i in 1:n){
+    #set.seed(i)          #Set seed for reproducibility
+    Data_matrix[i,] <- rnorm(p, mu, Sigma)
+  }
+  name <- sprintf("Data_Ex1_n=%d_p=%d_mu%d_Sigma%d.txt", n, p, WhichMu, WhichSig)
+  file.create(name)
+  write.table(Data_matrix , name, append = TRUE, sep = " ", dec = ".",
+              row.names = FALSE, col.names = FALSE)
+}
+
