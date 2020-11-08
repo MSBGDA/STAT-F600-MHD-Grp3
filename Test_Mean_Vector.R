@@ -79,7 +79,6 @@ Test_n <- function(x){
 
 # PART Monte Carlo Simulation ----
 
-n <- 3                                 #size vector
 p <- 6                                #dimension vector (multiple of 3)
 
 mu0 <- rep(0, p)
@@ -107,11 +106,12 @@ for (i in 1:p){
 }
 Sigma3 <- D %*% R %*% D
 
+# Example: Data_generator_Ex1(4, 6, mu2, Sigma3, 2, 3) 2 and 3 because we use mu2 ans Sigma3 in this examle
 Data_generator_Ex1 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
   Data_matrix <- matrix(0, nrow = n, ncol = p)
   for (i in 1:n){
     #set.seed(i)          #Set seed for reproducibility
-    Data_matrix[i,] <- rnorm(p, mu, Sigma)
+    Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rnorm(p, 0, 1))
   }
   name <- sprintf("Data_Ex1_n=%d_p=%d_mu%d_Sigma%d.txt", n, p, WhichMu, WhichSig)
   file.create(name)
@@ -119,3 +119,26 @@ Data_generator_Ex1 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
               row.names = FALSE, col.names = FALSE)
 }
 
+Data_generator_Ex2 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
+  Data_matrix <- matrix(0, nrow = n, ncol = p)
+  for (i in 1:n){
+    #set.seed(i)          #Set seed for reproducibility
+    Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rt(p, 3))
+  }
+  name <- sprintf("Data_Ex2_n=%d_p=%d_mu%d_Sigma%d.txt", n, p, WhichMu, WhichSig)
+  file.create(name)
+  write.table(Data_matrix , name, append = TRUE, sep = " ", dec = ".",
+              row.names = FALSE, col.names = FALSE)
+}
+
+Data_generator_Ex3 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
+  Data_matrix <- matrix(0, nrow = n, ncol = p)
+  for (i in 1:n){
+    #set.seed(i)          #Set seed for reproducibility
+    Data_matrix[i,] <- t(0.9 * (mu + t(chol(Sigma)) %*% rnorm(p, 0, 1)) + 0.1*(mu + t(chol(9 * Sigma)) %*% rnorm(p, 0, 1)))
+  }
+  name <- sprintf("Data_Ex3_n=%d_p=%d_mu%d_Sigma%d.txt", n, p, WhichMu, WhichSig)
+  file.create(name)
+  write.table(Data_matrix , name, append = TRUE, sep = " ", dec = ".",
+              row.names = FALSE, col.names = FALSE)
+}
