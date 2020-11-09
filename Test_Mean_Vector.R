@@ -145,7 +145,7 @@ Data_generator_Ex3 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
 
 
 
-# PART generate data and Tn test them ----
+# PART generate data and Tn test it ----
 
 #Because create 1000 (check article 3.1) data files for each cases will take more times
 #this section is a first try to generate 1000 data set and create an histogram 
