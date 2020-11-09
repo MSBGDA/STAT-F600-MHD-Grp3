@@ -79,7 +79,7 @@ Test_n <- function(x){
 
 # PART Monte Carlo Simulation ----
 
-p <- 6                                #dimension vector (multiple of 3)
+p <- 30                                #dimension vector (multiple of 3)
 
 mu0 <- rep(0, p)
 mu1 <- rep(0.25, p)
@@ -141,4 +141,112 @@ Data_generator_Ex3 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
   file.create(name)
   write.table(Data_matrix , name, append = TRUE, sep = " ", dec = ".",
               row.names = FALSE, col.names = FALSE)
+}
+
+
+
+# PART generate data and Tn test them ----
+
+#Because create 1000 (check article 3.1) data files for each cases will take more times
+#this section is a first try to generate 1000 data set and create an histogram 
+#of the Test function. To verify the disribution
+
+p <- 30                                #dimension vector (multiple of 3)
+
+mu0 <- rep(0, p)
+mu1 <- rep(0.25, p)
+mu2 <- c(rep(0, p %/% 3), rep(0.25, p %/% 3), rep(-0.25, p %/% 3))
+
+Sigma1 <- 'diag<-'(matrix(0.2, p, p), 1)
+
+Sigma2 <- matrix(0 , nrow = p, ncol = p)
+for (i in 1:p){
+  for (j in 1:p){
+    Sigma2[i, j] <- 0.8 ** abs(i - j)
+  }
+}
+
+D <- matrix(0 , nrow = p, ncol = p)
+for (i in 1:p){
+  D[i, i] <- 2 + (p - i + 1) / p
+}
+R <- matrix(0 , nrow = p, ncol = p)
+for (i in 1:p){
+  for (j in 1:p){
+    R[i, j] <- (-1) ** (i + j) * (0.2) ** (abs(i - j) ** (0.1))
+  }
+}
+Sigma3 <- D %*% R %*% D
+
+tr <- function (m){
+  total_sum <- 0
+  if(is.matrix(m))
+  {
+    row_count <- nrow(m)
+    col_count <- ncol(m)
+    if(row_count == col_count)
+    {
+      total_sum <-sum(diag(m))
+      total_sum
+    }
+    else
+    {
+      message ('Matrix is not square')
+    }
+  }
+  else
+  {
+    message( 'Object is not a matrix')
+    
+  }
+}
+
+HistoTest_Ex1 <- function(n, p, mu , Sigma, WhichMu, WhichSig){
+  dat <- c()
+  for (i in 1:1000){
+    if (i %% 50 == 0){
+      print(i)
+    }
+    Data_matrix <- matrix(0, nrow = n, ncol = p)
+    for (i in 1:n){
+      #set.seed(i)          #Set seed for reproducibility
+      Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rnorm(p, 0, 1))
+    }
+    for (i in 1:n){
+      #matrix with the vector Zi. Each row is a vector of p components
+      Data_matrix[i,] <- Data_matrix[i,] / norm(Data_matrix[i,], type= '2')
+    }
+    Tn <- 0               
+    for (i in 2:n){
+      for (j in 1:(i-1)){
+        Tn <- Tn + Data_matrix[i,] %*% Data_matrix[j,]
+      }
+    }  
+    Z_star <- 0
+    for (i in 1:n){
+      Z_star <- Z_star + Data_matrix[i,]
+    }
+    Z_star <- Z_star / (n - 2)
+    Matrix_Zj_ZjT <- matrix(0, nrow = p, ncol = p)
+    for (i in 1:n){
+      Matrix_Zj_ZjT <- Matrix_Zj_ZjT + Data_matrix[i,] %*% t(Data_matrix[i,])
+    }
+    Tr_B <- -n/(n - 2)**2 + ((n-1)/(n*(n-2)**2))* tr(Matrix_Zj_ZjT %*% Matrix_Zj_ZjT) +
+      ((1-2*n)/(n*(n-1))) * Z_star %*% Matrix_Zj_ZjT %*% Z_star + 
+      (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
+    Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
+    dat <- append(dat, Tn_normalized)
+  }
+  title <- sprintf("Case 1. n=%d p=%d mu%d Sigma%d", n, p, WhichMu, WhichSig)
+  
+  hist(dat,
+       breaks = 20,
+       prob = TRUE,
+       main= title,
+       xlab="Tn",
+  )
+  #m<-mean(dat)
+  #std<-sqrt(var(dat))
+  curve(dnorm(x, mean=0, sd=1), 
+        col="darkblue", lwd=2, add=TRUE, yaxt="n")
 }
