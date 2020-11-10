@@ -238,13 +238,12 @@ HistoTest_Ex1 <- function(n, p, mu , Sigma, WhichMu, WhichSig){
     dat <- append(dat, Tn_normalized)
   }
   title <- sprintf("Case 1. n=%d p=%d mu%d Sigma%d", n, p, WhichMu, WhichSig)
-  
-  hist(dat,
-       breaks = 20,
-       prob = TRUE,
-       main= title,
-       xlab="Tn",
-  )
+  h <- hist(dat,
+        breaks = 20,
+        prob = FALSE
+    )
+  h$counts <- h$counts / sum(h$counts)
+  plot(h,main= title, freq=TRUE,xlab="Tn", ylab="Relative Frequency", ylim=c(0,0.5))
   #m<-mean(dat)
   #std<-sqrt(var(dat))
   curve(dnorm(x, mean=0, sd=1), 
