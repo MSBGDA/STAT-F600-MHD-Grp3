@@ -1,0 +1,110 @@
+---
+title: "Group 3: work"
+output: html_notebook
+---
+
+# Initialisation
+
+```{r}
+n <- 18                                 #size vector
+p <- 20                                 #dimension vector
+mu <- rep(0, p)                         #mean vector equal 0
+Gamma <- 'diag<-'(matrix(0, p, p), 1)   #Gamma matrix p x p: Identity for testing
+
+```
+
+# random error epsilon_i in p dim 
+
+Random vector uniformly distributed on the unit hypersphere in R^p.
+[Muller , Marsaglia](http://extremelearning.com.au/how-to-generate-uniformly-random-points-on-n-spheres-and-n-balls/) ('Normalised Gaussians') method is used here.
+```{r}
+Ui <- function(x){
+  #set.seed(0)          #Set seed for reproducibility
+  v <- rnorm(p, 0, 1)
+  norm <- norm(v, type = '2')
+  U_i <- v / norm
+  return(U_i)
+}
+```
+
+Non negative random variable independent of Ui:  
+```{r}
+Ri <- function(x){
+  #set.seed(0)          #Set seed for reproducibility
+  R_i <- runif(1, 0, 100) # 100 is arbitrary
+  return(R_i)
+}
+```
+
+Special case Ri: Ri^2 ~ [Chi-square distribution](https://statisticsglobe.com/chi-square-distribution-in-r-dchisq-pchisq-qchisq-rchisq), p degree of freedom:
+```{r}
+Ri_Chi <- function(x){
+  #set.seed(0)          #Set seed for reproducibility
+  R_i <- rchisq(1, df = p) ** 0.5
+  return(R_i)
+}
+```
+
+Finally 
+```{r}
+epsilon_i <- function(x){
+  epsi <- Gamma %*% (Ri_Chi() * Ui()) #nb: %*% is for matrix product
+  #epsi <- Gamma %*% (Ri() * Ui())
+  return(epsi)
+}
+```
+
+# Generate data
+
+First, create a file:
+```{r}
+file.create("C:/Users/maria/OneDrive/Documents/Unif 2021/mult. high dim. stat/DataTest.txt")
+FilePath <- "C:/Users/maria/OneDrive/Documents/Unif 2021/mult. high dim. stat/DataTest.txt"    #To modify
+
+```
+
+This loop fill the file with the data. Each row is a vector of p dimension.
+```{r}
+for (i in 1:n){
+  Xi <- mu + epsilon_i()
+  write.table(t(Xi) , FilePath, append = TRUE, sep = " ", dec = ".",
+              row.names = FALSE, col.names = FALSE) #nb: t() is for transpose
+}
+```
+
+# Mean vector test Tn
+
+This command import data from file and convert the data into a matrix:
+```{r}
+my_data <- matrix(scan(file = file.choose()),ncol=p,byrow=TRUE)
+
+#my_data <- matrix(scan(file = FilePath),ncol=p,byrow=TRUE) #import data from file
+
+```
+
+This command create an empty matrix to fill with the vectors Zi:
+```{r}
+Z <- matrix(, nrow = n, ncol = p)
+```
+
+Each empty row of the previous matrix is replace by a Zi vector:
+```{r}
+for (i in 1:n){
+  #matrix with the vector Zi. Each row is a vector of p components
+  Z[i,] <- my_data[i,] / norm(my_data[i,], type= '2')
+}
+```
+
+Finally, the Test statistic Tn:
+```{r}
+Test_n <- function(x){
+  Tn <- 0               
+  for (i in 2:n){
+    for (j in 1:(i-1)){
+      Tn <- Tn + Z[i,] %*% Z[j,]
+  return(Tn)
+    }
+  }
+}
+```
+
