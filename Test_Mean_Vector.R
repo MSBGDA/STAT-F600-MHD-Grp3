@@ -238,14 +238,43 @@ HistoTest_Ex1 <- function(n, p, mu , Sigma, WhichMu, WhichSig){
     dat <- append(dat, Tn_normalized)
   }
   title <- sprintf("Case 1. n=%d p=%d mu%d Sigma%d", n, p, WhichMu, WhichSig)
+  petitest <- rnorm(1000000, 0, 1)
   h <- hist(dat,
         breaks = 20,
-        prob = FALSE
+        prob = TRUE,
+        main= title,
+        xlab="Tn"
     )
-  h$counts <- h$counts / sum(h$counts)
-  plot(h,main= title, freq=TRUE,xlab="Tn", ylab="Relative Frequency", ylim=c(0,0.5))
-  #m<-mean(dat)
-  #std<-sqrt(var(dat))
-  curve(dnorm(x, mean=0, sd=1), 
-        col="darkblue", lwd=2, add=TRUE, yaxt="n")
+  lines(density(petitest), col="blue", lwd=2)
 }
+
+
+#petitest <- rnorm(1000000, 0, 1)
+#gramtest <- hist(petitest,
+#          breaks = 50,
+#          prob = TRUE
+#)
+#lines(density(petitest), col="blue", lwd=2)
+#gramtest$counts <- gramtest$counts / sum(gramtest$counts)
+#plot(gramtest,main= "N(-0.03980, 1.037314)", freq=TRUE,xlab="", ylab="Relative Frequency")
+#curve(dnorm(x, mean=-0.03980, sd=1.037314), 
+      #col="darkgreen", lwd=2, add=TRUE, yaxt="n")
+
+
+
+#h <- hist(dat,
+#          breaks = 20,
+#          prob = TRUE,
+#          main= title,
+#          xlab="Tn"
+#)
+#h$counts <- h$counts / sum(h$counts)
+#plot(h,main= title, freq=TRUE,xlab="Tn", ylab="Relative Frequency", ylim=c(0,0.5))
+#m<-mean(dat)
+#std<-sqrt(var(dat))
+#N_mu_sig <- sprintf("N(%f,%f)", m, std)
+#curve(dnorm(x, mean=0, sd=1), 
+#      col="darkblue", lwd=2, add=TRUE, yaxt="n")
+#curve(dnorm(x, mean=m, sd=std), 
+#      col="darkgreen", lwd=2, add=TRUE, yaxt="n")
+#legend("topright" ,c("N(0,1)", N_mu_sig),cex=.8,fill=c("darkblue", "darkgreen"))
