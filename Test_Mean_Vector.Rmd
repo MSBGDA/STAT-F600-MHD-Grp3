@@ -208,7 +208,7 @@ Data_generator_Ex3 <- function(n, p, mu, Sigma, WhichMu, WhichSig){
 #this section is a first try to generate 1000 data set and create an histogram 
 #of the Test function. To verify the disribution
 
-p <- 30                                #dimension vector (multiple of 3)
+p <- 1000                              #dimension vector (multiple of 3)
 
 mu0 <- rep(0, p)
 mu1 <- rep(0.25, p)
@@ -294,23 +294,24 @@ HistoTest_Ex1 <- function(n, p, mu , Sigma, WhichMu, WhichSig){
     Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
     dat <- append(dat, Tn_normalized)
   }
-  title <- sprintf("Case 1. n=%d p=%d mu%d Sigma%d", n, p, WhichMu, WhichSig)
+   
+  title <- sprintf("Case 1. n=%d p=%d mu%d Sigma=%d", n, p, WhichMu, WhichSig)
+  x=seq(-4,3,length=1000)
+  y <- dnorm(x, 0, 1)
+  h <- plot(density(dat),
+        
+        main= title,
+        xlab="Tn",
+        xlim = c(-4,4)
+    )
+lines(x,y,col='red',lwd=2,lty='dashed')
+ 
   
-  hist(dat,
-       breaks = 20,
-       prob = TRUE,
-       main= title,
-       xlab="Tn",
-  )
-  #m<-mean(dat)
-  #std<-sqrt(var(dat))
-  curve(dnorm(x, mean=0, sd=1), 
-        col="darkblue", lwd=2, add=TRUE, yaxt="n")
 }
 ```
 
 
 ```{r}
-HistoTest_Ex1(28, 30, mu0, Sigma1,0,1)
+HistoTest_Ex1(50, 1000, mu0, Sigma2,0,2)
 ```
 
