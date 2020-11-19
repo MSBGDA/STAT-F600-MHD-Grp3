@@ -103,10 +103,10 @@ Power_test <- function (Matrix_input, Null_Hypo, alpha){
 HistoPower_Ex1 <- function(WhichMu, WhichSigma){
   matrix_Tn <- matrix(0, nrow = 4, ncol = 1000)
   k <- 1
-  # (n in c(10,12))
-  for (n in c(20,50)) {
-    # (p in c(21,30)
-    for (p in c(1002,2001)){
+  # (n in c(10,12))  (n in c(20,50))
+  for (n in c(10,12)) {
+    # (p in c(21,30))   (p in c(1002,2001))
+    for (p in c(21,30)){
       dat <- c()
       mu <- mu(WhichMu, p)
       Sigma <- Sigma(WhichSigma, p)
@@ -151,6 +151,7 @@ HistoPower_Ex1 <- function(WhichMu, WhichSigma){
       k <- k + 1
     }
   }
+  library(ggplot2)
   cases <- c("n=20,p=1000", "n=20,p=2000", "n=50,p=1000", "n=50,p=2000")
   power <- Power_test(matrix_Tn, 0, 0.05)
   print("histo shall be display:")
