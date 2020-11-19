@@ -98,7 +98,8 @@ Power_test <- function (Matrix_input, Null_Hypo, alpha){
 
 # Part Example 1 ----
 
-#this function plot the empirical power and the theoritical power
+#this function provides histo. of the power for 4 cases
+#Ex: HistoPower_Ex1(2,3)
 HistoPower_Ex1 <- function(WhichMu, WhichSigma){
   matrix_Tn <- matrix(0, nrow = 4, ncol = 1000)
   k <- 1
