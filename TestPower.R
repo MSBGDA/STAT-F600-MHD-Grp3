@@ -101,18 +101,18 @@ Power_test <- function (Matrix_input, Null_Hypo, alpha){
 #this function provides histo. of the power for 4 cases
 #Ex: HistoPower_Ex1(2,3)
 HistoPower_Ex1 <- function(WhichMu, WhichSigma){
-  matrix_Tn <- matrix(0, nrow = 4, ncol = 1000)
+  matrix_Tn <- matrix(0, nrow = 4, ncol = 500)
   k <- 1
   # (n in c(10,12))  (n in c(20,50))
-  for (n in c(10,12)) {
+  for (n in c(10,25)) {
     # (p in c(21,30))   (p in c(1002,2001))
-    for (p in c(21,30)){
+    for (p in c(102,402)){
       dat <- c()
       mu <- mu(WhichMu, p)
       Sigma <- Sigma(WhichSigma, p)
       print(paste0("n=",n," ", "p=",p))
       set.seed(17)              #Set seed for reproducibility 
-      for (i in 1:1000){
+      for (i in 1:500){
         if (i %% 50 == 0){
           print(i)
         }
@@ -152,14 +152,149 @@ HistoPower_Ex1 <- function(WhichMu, WhichSigma){
     }
   }
   library(ggplot2)
-  cases <- c("n=20,p=1000", "n=20,p=2000", "n=50,p=1000", "n=50,p=2000")
+  cases <- c("n=10,p=100", "n=10,p=400", "n=25,p=100", "n=25,p=400")
   power <- Power_test(matrix_Tn, 0, 0.05)
   print("histo shall be display:")
   print(power)
   d <- tibble::tibble(cases, power)
   p <- ggplot(d, aes(x = cases, y = power)) +
-    geom_col(fill = 'blue', alpha = 0.3)
+    geom_col(fill = 'blue', alpha = 0.3) +
+    geom_text(aes(label=power), vjust=1.5)
   title <- sprintf("Empirical power: n data generated from N_p(mu%d, Sigma%d)", WhichMu, WhichSigma)
   p + ggtitle(title) +
     xlab("Cases") + ylab("Power")
 }
+
+HistoPower2_Ex1 <- function(WhichMu, WhichSigma){
+  matrix_Tn <- matrix(0, nrow = 4, ncol = 500)
+  k <- 1
+  # (n in c(10,12))  (n in c(20,50))
+  for (n in c(30)) {
+    # (p in c(21,30))   (p in c(1002,2001))
+    for (p in c(30,90,210,510)){
+      dat <- c()
+      mu <- mu(WhichMu, p)
+      Sigma <- Sigma(WhichSigma, p)
+      print(paste0("n=",n," ", "p=",p))
+      set.seed(17)              #Set seed for reproducibility 
+      for (i in 1:500){
+        if (i %% 50 == 0){
+          print(i)
+        }
+        Data_matrix <- matrix(0, nrow = n, ncol = p)
+        for (i in 1:n){
+          #random vector generated with cholesky decomposition
+          Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rnorm(p, 0, 1))
+        }
+        for (i in 1:n){
+          #matrix with the vector Zi. Each row is a vector of p components
+          Data_matrix[i,] <- Data_matrix[i,] / norm(Data_matrix[i,], type= '2')
+        }
+        Tn <- 0               
+        for (i in 2:n){
+          for (j in 1:(i-1)){
+            Tn <- Tn + Data_matrix[i,] %*% Data_matrix[j,]
+          }
+        }  
+        Z_star <- 0
+        for (i in 1:n){
+          Z_star <- Z_star + Data_matrix[i,]
+        }
+        Z_star <- Z_star / (n - 2)
+        Matrix_Zj_ZjT <- matrix(0, nrow = p, ncol = p)
+        for (i in 1:n){
+          Matrix_Zj_ZjT <- Matrix_Zj_ZjT + Data_matrix[i,] %*% t(Data_matrix[i,])
+        }
+        Tr_B <- -n/(n - 2)**2 + ((n-1)/(n*(n-2)**2))* tr(Matrix_Zj_ZjT %*% Matrix_Zj_ZjT) +
+          ((1-2*n)/(n*(n-1))) * (Z_star %*% Matrix_Zj_ZjT %*% Z_star) + 
+          (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
+        Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
+        dat <- append(dat, Tn_normalized)
+      }
+      matrix_Tn[k,] <- dat
+      print(paste0("k=",k))
+      k <- k + 1
+    }
+  }
+  library(ggplot2)
+  cases <- c("p=30", "p=90", "p=210", "p=510")
+  power <- Power_test(matrix_Tn, 0, 0.05)
+  print("histo shall be display:")
+  print(power)
+  d <- tibble::tibble(cases, power)
+  p <- ggplot(d, aes(x = cases, y = power)) +
+    geom_col(fill = 'blue', alpha = 0.3) +
+    geom_text(aes(label=power), vjust=1.5)
+  title <- sprintf("Empirical power: n=30 data generated from N_p(mu%d, Sigma%d)", WhichMu, WhichSigma)
+  p + ggtitle(title) +
+    xlab("Cases") + ylab("Power")
+}
+
+#plot of the theoretical and empirical error for case 1
+HistoTest_Ex1 <- function(n, p, mu , Sigma, WhichMu, WhichSig){
+  dat <- c()
+  for (i in 1:1000){
+    if (i %% 50 == 0){
+      print(i)
+    }
+    Data_matrix <- matrix(0, nrow = n, ncol = p)
+    for (i in 1:n){
+      #set.seed(i)          #Set seed for reproducibility
+      Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rnorm(p, 0, 1))
+    }
+    for (i in 1:n){
+      #matrix with the vector Zi. Each row is a vector of p components
+      Data_matrix[i,] <- Data_matrix[i,] / norm(Data_matrix[i,], type= '2')
+    }
+    Tn <- 0               
+    for (i in 2:n){
+      for (j in 1:(i-1)){
+        Tn <- Tn + Data_matrix[i,] %*% Data_matrix[j,]
+      }
+    }  
+    Z_star <- 0
+    for (i in 1:n){
+      Z_star <- Z_star + Data_matrix[i,]
+    }
+    Z_star <- Z_star / (n - 2)
+    Matrix_Zj_ZjT <- matrix(0, nrow = p, ncol = p)
+    for (i in 1:n){
+      Matrix_Zj_ZjT <- Matrix_Zj_ZjT + Data_matrix[i,] %*% t(Data_matrix[i,])
+    }
+    Tr_B <- -n/(n - 2)**2 + ((n-1)/(n*(n-2)**2))* tr(Matrix_Zj_ZjT %*% Matrix_Zj_ZjT) +
+      ((1-2*n)/(n*(n-1))) * (Z_star %*% Matrix_Zj_ZjT %*% Z_star) + 
+      (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
+    Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
+    dat <- append(dat, Tn_normalized)
+  }
+}
+
+
+x = seq(0,0.5,by=0.01)
+ggplot(data.frame(x=x, cumulative=pnorm(-1.96 + sqrt(0.5*50*51)*x,0,1)), aes(x,cumulative))+geom_line()+ggtitle('Cumulative distribution function of standard normal')
+
+set.seed(1234)
+wdata = data.frame(
+  sex = factor(rep(c("F", "M"), each=200)),
+  weight = c(rnorm(200, 55), rnorm(200, 58))
+)
+
+head(wdata, 4)
+library(ggplot2)
+theme_set(
+  theme_minimal() +
+    theme(legend.position = "right")
+)
+
+# Une autre option pour geom = "point"
+ggplot(wdata, aes(x = weight)) +
+  stat_ecdf(aes(color = sex,linetype = sex), 
+            geom = "step", size = 1.5) +
+  scale_color_manual(values = c("#00AFBB", "#E7B800"))+ 
+  labs(y = "f(weight)")
+
+device <- c('laptop', 'mobile', 'tablet')
+visits <- c(30000, 12000, 5000)
+traffic <- tibble::tibble(device, visits)
+ggplot(traffic, aes(x = device, y = visits)) +
+  geom_col(fill = 'blue') + geom_text(aes(label=visits), vjust=1.5)
