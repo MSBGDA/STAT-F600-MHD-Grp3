@@ -231,46 +231,71 @@ HistoPower2_Ex1 <- function(WhichMu, WhichSigma){
 }
 
 #plot of the theoretical and empirical error for case 1
-HistoTest_Ex1 <- function(n, p, mu , Sigma, WhichMu, WhichSig){
-  dat <- c()
-  for (i in 1:1000){
-    if (i %% 50 == 0){
-      print(i)
-    }
-    Data_matrix <- matrix(0, nrow = n, ncol = p)
-    for (i in 1:n){
-      #set.seed(i)          #Set seed for reproducibility
-      Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rnorm(p, 0, 1))
-    }
-    for (i in 1:n){
-      #matrix with the vector Zi. Each row is a vector of p components
-      Data_matrix[i,] <- Data_matrix[i,] / norm(Data_matrix[i,], type= '2')
-    }
-    Tn <- 0               
-    for (i in 2:n){
-      for (j in 1:(i-1)){
-        Tn <- Tn + Data_matrix[i,] %*% Data_matrix[j,]
+#power vs mu. So no need to specify it when you call the function
+EmpiricalPowerPlot_Ex1 <- function(n, p, WhichSigma){
+  x <- seq(0,0.30,by=0.01)
+  matrix_Tn <- matrix(0, nrow = length(x), ncol = 500)
+  k <- 1
+  for (q in x){
+      dat <- c()
+      mu <- rep(q, p)
+      Sigma <- Sigma(WhichSigma, p)
+      print(q)
+      set.seed(17)              #Set seed for reproducibility 
+      for (i in 1:500){
+        if ((q*100) %% 5 == 0){
+          if (i %% 50 == 0){
+          print(i)
+          }
+        }  
+        Data_matrix <- matrix(0, nrow = n, ncol = p)
+        for (i in 1:n){
+          #random vector generated with cholesky decomposition
+          Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rnorm(p, 0, 1))
+        }
+        for (i in 1:n){
+          #matrix with the vector Zi. Each row is a vector of p components
+          Data_matrix[i,] <- Data_matrix[i,] / norm(Data_matrix[i,], type= '2')
+        }
+        Tn <- 0               
+        for (i in 2:n){
+          for (j in 1:(i-1)){
+            Tn <- Tn + Data_matrix[i,] %*% Data_matrix[j,]
+          }
+        }  
+        Z_star <- 0
+        for (i in 1:n){
+          Z_star <- Z_star + Data_matrix[i,]
+        }
+        Z_star <- Z_star / (n - 2)
+        Matrix_Zj_ZjT <- matrix(0, nrow = p, ncol = p)
+        for (i in 1:n){
+          Matrix_Zj_ZjT <- Matrix_Zj_ZjT + Data_matrix[i,] %*% t(Data_matrix[i,])
+        }
+        Tr_B <- -n/(n - 2)**2 + ((n-1)/(n*(n-2)**2))* tr(Matrix_Zj_ZjT %*% Matrix_Zj_ZjT) +
+          ((1-2*n)/(n*(n-1))) * (Z_star %*% Matrix_Zj_ZjT %*% Z_star) + 
+          (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
+        Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
+        dat <- append(dat, Tn_normalized)
       }
-    }  
-    Z_star <- 0
-    for (i in 1:n){
-      Z_star <- Z_star + Data_matrix[i,]
+      matrix_Tn[k,] <- dat
+      k <- k + 1
     }
-    Z_star <- Z_star / (n - 2)
-    Matrix_Zj_ZjT <- matrix(0, nrow = p, ncol = p)
-    for (i in 1:n){
-      Matrix_Zj_ZjT <- Matrix_Zj_ZjT + Data_matrix[i,] %*% t(Data_matrix[i,])
-    }
-    Tr_B <- -n/(n - 2)**2 + ((n-1)/(n*(n-2)**2))* tr(Matrix_Zj_ZjT %*% Matrix_Zj_ZjT) +
-      ((1-2*n)/(n*(n-1))) * (Z_star %*% Matrix_Zj_ZjT %*% Z_star) + 
-      (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
-    Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
-    dat <- append(dat, Tn_normalized)
-  }
+  library(ggplot2)
+  dataPower <- data.frame(
+    x <- x <- seq(0,0.30,by=0.01),
+    power <- Power_test(matrix_Tn, 0, 0.05)
+  )
+  ggplot(data = dataPower, aes(x = x, y = power)) + #power, color = genus
+    geom_line() + 
+    labs(x = expression(paste(mu)))
 }
 
 
-x = seq(0,0.5,by=0.01)
+
+
+#PART testing stuff, don't pay attention ----
+x <- seq(0,0.30,by=0.01)
 ggplot(data.frame(x=x, cumulative=pnorm(-1.96 + sqrt(0.5*50*51)*x,0,1)), aes(x,cumulative))+geom_line()+ggtitle('Cumulative distribution function of standard normal')
 
 set.seed(1234)
@@ -298,3 +323,11 @@ visits <- c(30000, 12000, 5000)
 traffic <- tibble::tibble(device, visits)
 ggplot(traffic, aes(x = device, y = visits)) +
   geom_col(fill = 'blue') + geom_text(aes(label=visits), vjust=1.5)
+
+dataPower <- data.frame(
+  x <- c (0:5),
+  power = c(0, 1, 4, 9, 16, 25)
+)
+ggplot(data = dataPower, aes(x = x, y = power)) + #power, color = genus
+  geom_line() + 
+  labs(x = expression(paste(mu))) 
