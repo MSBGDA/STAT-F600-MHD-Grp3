@@ -96,6 +96,20 @@ Power_test <- function (Matrix_input, Null_Hypo, alpha){
   return(power_vector)
 }
 
+A_matrix_Normal <- function(p, sigma){
+  Id_matrix <- 'diag<-'(matrix(0, p, p), 1)
+  A <- matrix(0 , nrow = p, ncol = p)
+  N <- 1000
+  for (i in 1:N){
+    eps <- chol(sigma) %*% rnorm(p, 0, 1)
+    eps_normed <- norm(eps, type= '2')
+    a <- (1/eps_normed) * (Id_matrix - (1/eps_normed**2) * eps %*% t(eps))
+    A <- A + a
+  }
+  A <- A/N
+  return(A)
+}
+
 # Part Example 1 ----
 
 #this function provides histo. of the power for 4 cases
@@ -234,20 +248,23 @@ HistoPower2_Ex1 <- function(WhichMu, WhichSigma){
 #power vs mu. So no need to specify it when you call the function
 EmpiricalPowerPlot_Ex1 <- function(n, p, WhichSigma){
   x <- seq(0,0.30,by=0.01)
+  z_score <- c()
   matrix_Tn <- matrix(0, nrow = length(x), ncol = 500)
   k <- 1
+  Sigma <- Sigma(WhichSigma, p)
+  print('Computation of the matrix A takes time...  ¯|_(*_*)_|¯')
+  A <- A_matrix_Normal(p, Sigma)
+  print("OK done !")
   for (q in x){
       dat <- c()
+      Tr_B_vect <- c()
       mu <- rep(q, p)
-      Sigma <- Sigma(WhichSigma, p)
       print(q)
       set.seed(17)              #Set seed for reproducibility 
       for (i in 1:500){
-        if ((q*100) %% 5 == 0){
-          if (i %% 50 == 0){
+        if (i %% 50 == 0){
           print(i)
           }
-        }  
         Data_matrix <- matrix(0, nrow = n, ncol = p)
         for (i in 1:n){
           #random vector generated with cholesky decomposition
@@ -276,27 +293,78 @@ EmpiricalPowerPlot_Ex1 <- function(n, p, WhichSigma){
           ((1-2*n)/(n*(n-1))) * (Z_star %*% Matrix_Zj_ZjT %*% Z_star) + 
           (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
         Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
+        Tr_B_vect <- append(Tr_B_vect, Tr_B)
         dat <- append(dat, Tn_normalized)
+        Mean_Tr_B <- mean(Tr_B_vect)
       }
+      z <- -1.96 + sqrt((0.5 * n * (n+1))/ Mean_Tr_B) * t(mu) %*% A %*% mu
       matrix_Tn[k,] <- dat
+      z_score <- append(z_score, z)
       k <- k + 1
     }
   library(ggplot2)
-  dataPower <- data.frame(
-    x <- x <- seq(0,0.30,by=0.01),
+  
+  dataPower_theo <- data.frame(
+    x <- seq(0,0.30,by=0.01),
+    power_theo <- pnorm(z_score)
+  )
+  
+  dataPower_empi <- data.frame(
+    x <- seq(0,0.30,by=0.01),
     power <- Power_test(matrix_Tn, 0, 0.05)
   )
-  ggplot(data = dataPower, aes(x = x, y = power)) + #power, color = genus
-    geom_line() + 
+  
+  ggplot(NULL, aes(x = x, y = power, fill= power)) +
+    geom_line(data = dataPower_theo, col = "blue") +
+    geom_point(data = dataPower_empi, col = "red") +
     labs(x = expression(paste(mu)))
+  
 }
 
+ggplot(data = dataPower_empi, aes(x = x, y = power)) +
+  geom_line() + 
+  labs(x = expression(paste(mu)))
+#####################
+# SHIT 1 #
+#####################
+dataPower_theo <- data.frame(
+  x <- seq(0,0.30,by=0.01),
+  power_theo <- pnorm(z_score)
+)
 
+dataPower_empi <- data.frame(
+  x <- seq(0,0.30,by=0.01),
+  power <- Power_test(matrix_Tn, 0, 0.05)
+)
 
+ggplot(NULL, aes(x = x, y = power, fill= power)) +
+  geom_line(data = dataPower_theo, col = "blue") +
+  geom_point(data = dataPower_empi, col = "red") +
+  labs(x = expression(paste(mu)))
+#####################
+# SHIT 2 #
+#####################
+dataPower <- data.frame(
+  x <- seq(0,0.30,by=0.01),
+  power_theo <- pnorm(z_score),
+  power_empi <- Power_test(matrix_Tn, 0, 0.05)
+)
 
+ggplot()+
+  geom_line(data=dataPower,aes(y=power_theo,x= x,colour="blue"),size=1 )+
+  geom_line(data=dataPower,aes(y=power_empi,x= x,colour="red"),size=1) +
+  scale_color_discrete(name = "power", labels = c("Theoretical", "Empirical"))+
+  labs(x = expression(paste(mu)))+
+  labs(y = "power")
 #PART testing stuff, don't pay attention ----
 x <- seq(0,0.30,by=0.01)
-ggplot(data.frame(x=x, cumulative=pnorm(-1.96 + sqrt(0.5*50*51)*x,0,1)), aes(x,cumulative))+geom_line()+ggtitle('Cumulative distribution function of standard normal')
+ggplot(data.frame(x=x, cumulative=pnorm(-1.96 + sqrt(16*1*1)*x,0,1)), aes(x,cumulative))+geom_line()+ggtitle('Cumulative distribution function of standard normal')
+
+Phi <- function(x){-1.96 + 35.7*x}
+x <- seq(0.1,0.4,by=0.01)
+Phi <- Vectorize(Phi)
+dx <- 0.01
+plot(x, cumsum(Phi(x) * dx), type = "l", ylab = "cummulative probability", main = "My CDF")
 
 set.seed(1234)
 wdata = data.frame(
@@ -318,12 +386,6 @@ ggplot(wdata, aes(x = weight)) +
   scale_color_manual(values = c("#00AFBB", "#E7B800"))+ 
   labs(y = "f(weight)")
 
-device <- c('laptop', 'mobile', 'tablet')
-visits <- c(30000, 12000, 5000)
-traffic <- tibble::tibble(device, visits)
-ggplot(traffic, aes(x = device, y = visits)) +
-  geom_col(fill = 'blue') + geom_text(aes(label=visits), vjust=1.5)
-
 dataPower <- data.frame(
   x <- c (0:5),
   power = c(0, 1, 4, 9, 16, 25)
@@ -331,3 +393,10 @@ dataPower <- data.frame(
 ggplot(data = dataPower, aes(x = x, y = power)) + #power, color = genus
   geom_line() + 
   labs(x = expression(paste(mu))) 
+
+carre <- function(x){x**2}
+library(ggplot2)
+ggplot(data.frame(x = c(-1.96+ sqrt(0.5*50*51)*0.1, -1.96+ sqrt(0.5*50*51)*0.4)), aes(x = x)) +
+  stat_function(fun = pnorm)
+
+
