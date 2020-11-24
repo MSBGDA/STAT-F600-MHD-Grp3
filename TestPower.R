@@ -72,30 +72,6 @@ Sigma <- function (WhichSigma, p){
   return(Sigma)
 }
 
-# Use P-value on each row of a matrix to return the power for each case. 
-# Each row of Matrix_input corresponds to a case, for example n=20 and p=1000
-# Null_Hypo is 0 as in the article
-# alpha is the level of significance
-Power_test <- function (Matrix_input, Null_Hypo, alpha){
-  power_vector <- c()
-  N_row <- nrow(Matrix_input)
-  N_col <- ncol(Matrix_input)
-  for (i in 1:N_row){
-    std <- sd(Matrix_input[i,])
-    power <- 0
-    for (j in 1:N_col){
-      Tn <- Matrix_input[i,j]
-      p <- 2*(1-pnorm(Tn, Null_Hypo, std/sqrt(N_col)))
-      if (p < alpha){
-        power <- power + 1
-      }
-    }
-    power <- power / N_col
-    power_vector <- append(power_vector, power)
-  }
-  return(power_vector)
-}
-
 A_matrix_Normal <- function(p, sigma){
   Id_matrix <- 'diag<-'(matrix(0, p, p), 1)
   A <- matrix(0 , nrow = p, ncol = p)
@@ -109,6 +85,35 @@ A_matrix_Normal <- function(p, sigma){
   A <- A/N
   return(A)
 }
+
+# Use P-value on each row of a matrix to return the power for each case. 
+# Each row of Matrix_input corresponds to a case, for example n=20 and p=1000
+# Null_Hypo is 0 as in the article
+# alpha is the level of significance
+
+#####
+# PV Power_test       /!\ alpha = 0.05
+#####
+Power_test <- function (Matrix_input, Null_Hypo, alpha){
+  power_vector <- c()
+  N_row <- nrow(Matrix_input)
+  N_col <- ncol(Matrix_input)
+  for (i in 1:N_row){
+    std <- sd(Matrix_input[i,])
+    power <- 0
+    for (j in 1:N_col){
+      Tn <- Matrix_input[i,j]
+      p <- (1-pnorm(Tn, Null_Hypo, std/sqrt(N_col))) * 2
+      if (p < alpha){
+        power <- power + 1
+      }
+    }
+    power <- power / N_col
+    power_vector <- append(power_vector, power)
+  }
+  return(power_vector)
+  }
+
 
 # Part Example 1 ----
 
@@ -247,7 +252,7 @@ HistoPower2_Ex1 <- function(WhichMu, WhichSigma){
 #plot of the theoretical and empirical error for case 1
 #power vs mu. So no need to specify it when you call the function
 EmpiricalPowerPlot_Ex1 <- function(n, p, WhichSigma){
-  x <- seq(0,0.30,by=0.01)
+  x <- seq(0,0.30,by=0.02)
   z_score <- c()
   matrix_Tn <- matrix(0, nrow = length(x), ncol = 500)
   k <- 1
@@ -297,66 +302,164 @@ EmpiricalPowerPlot_Ex1 <- function(n, p, WhichSigma){
         dat <- append(dat, Tn_normalized)
         Mean_Tr_B <- mean(Tr_B_vect)
       }
-      z <- -1.96 + sqrt((0.5 * n * (n+1))/ Mean_Tr_B) * t(mu) %*% A %*% mu
+      z <- -1.96 + sqrt((0.5 * n * (n-1))/ Mean_Tr_B) * (t(mu) %*% (A %*% A) %*% mu)
       matrix_Tn[k,] <- dat
       z_score <- append(z_score, z)
       k <- k + 1
     }
   library(ggplot2)
   
-  dataPower_theo <- data.frame(
-    x <- seq(0,0.30,by=0.01),
-    power_theo <- pnorm(z_score)
+  dataPower <- data.frame(
+    x <- seq(0,0.30,by=0.02),
+    power_theo <- pnorm(z_score),
+    power_empi <- Power_test(matrix_Tn, 0, 0.05)
   )
+  title <- sprintf("n=%d data generated from N_%d(mu, Sigma%d)", n, p, WhichSigma)
   
-  dataPower_empi <- data.frame(
-    x <- seq(0,0.30,by=0.01),
-    power <- Power_test(matrix_Tn, 0, 0.05)
-  )
-  
-  ggplot(NULL, aes(x = x, y = power, fill= power)) +
-    geom_line(data = dataPower_theo, col = "blue") +
-    geom_point(data = dataPower_empi, col = "red") +
-    labs(x = expression(paste(mu)))
-  
+  ggplot()+
+    geom_line(data=dataPower,aes(y=power_theo,x= x,colour="blue"),size=1 )+
+    geom_line(data=dataPower,aes(y=power_empi,x= x,colour="red"),size=1) +
+    scale_color_discrete(name = "power", labels = c("Theoretical", "Empirical"))+
+    labs(x = expression(paste(mu)))+
+    labs(y = expression(paste(beta)))+
+    ggtitle(title)
 }
 
-ggplot(data = dataPower_empi, aes(x = x, y = power)) +
-  geom_line() + 
-  labs(x = expression(paste(mu)))
-#####################
-# SHIT 1 #
-#####################
-dataPower_theo <- data.frame(
-  x <- seq(0,0.30,by=0.01),
-  power_theo <- pnorm(z_score)
-)
+Test_Ex1 <- function(n, p, q, wichsigma, alpha){
+  Sigma <- Sigma(WhichSigma, p)
+  mu <- rep(q, p)
+  set.seed(17)
+  dat <- c()
+  for (i in 1:500){
+    if (i %% 50 == 0){
+      print(i)
+    }
+    Data_matrix <- matrix(0, nrow = n, ncol = p)
+    for (i in 1:n){
+      #random vector generated with cholesky decomposition
+      Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rnorm(p, 0, 1))
+    }
+    for (i in 1:n){
+      #matrix with the vector Zi. Each row is a vector of p components
+      Data_matrix[i,] <- Data_matrix[i,] / norm(Data_matrix[i,], type= '2')
+    }
+    Tn <- 0               
+    for (i in 2:n){
+      for (j in 1:(i-1)){
+        Tn <- Tn + Data_matrix[i,] %*% Data_matrix[j,]
+      }
+    }  
+    Z_star <- 0
+    for (i in 1:n){
+      Z_star <- Z_star + Data_matrix[i,]
+    }
+    Z_star <- Z_star / (n - 2)
+    Matrix_Zj_ZjT <- matrix(0, nrow = p, ncol = p)
+    for (i in 1:n){
+      Matrix_Zj_ZjT <- Matrix_Zj_ZjT + Data_matrix[i,] %*% t(Data_matrix[i,])
+    }
+    Tr_B <- -n/(n - 2)**2 + ((n-1)/(n*(n-2)**2))* tr(Matrix_Zj_ZjT %*% Matrix_Zj_ZjT) +
+      ((1-2*n)/(n*(n-1))) * (Z_star %*% Matrix_Zj_ZjT %*% Z_star) + 
+      (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
+    Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
+    dat <- append(dat, Tn_normalized)
+  }
+  N_col <- length(dat)
+  std <- sd(dat)
+  power <- 0
+  for (j in dat){
+      Tn <- j
+      p <- (1-pnorm(Tn, 0, std/sqrt(N_col))) * 2
+      if (p < alpha){
+        power <- power + 1
+      }
+    }
+  power <- power / N_col
+  print('power is')
+  return(power)
+}
 
-dataPower_empi <- data.frame(
-  x <- seq(0,0.30,by=0.01),
-  power <- Power_test(matrix_Tn, 0, 0.05)
-)
-
-ggplot(NULL, aes(x = x, y = power, fill= power)) +
-  geom_line(data = dataPower_theo, col = "blue") +
-  geom_point(data = dataPower_empi, col = "red") +
-  labs(x = expression(paste(mu)))
-#####################
-# SHIT 2 #
-#####################
-dataPower <- data.frame(
-  x <- seq(0,0.30,by=0.01),
-  power_theo <- pnorm(z_score),
-  power_empi <- Power_test(matrix_Tn, 0, 0.05)
-)
-
-ggplot()+
-  geom_line(data=dataPower,aes(y=power_theo,x= x,colour="blue"),size=1 )+
-  geom_line(data=dataPower,aes(y=power_empi,x= x,colour="red"),size=1) +
-  scale_color_discrete(name = "power", labels = c("Theoretical", "Empirical"))+
-  labs(x = expression(paste(mu)))+
-  labs(y = "power")
+Test_Ex2 <- function(n, p, q, wichsigma, alpha){
+  Sigma <- Sigma(WhichSigma, p)
+  mu <- rep(q, p)
+  set.seed(17)
+  dat <- c()
+  for (i in 1:500){
+    if (i %% 50 == 0){
+      print(i)
+    }
+    Data_matrix <- matrix(0, nrow = n, ncol = p)
+    for (i in 1:n){
+      #random vector generated with cholesky decomposition
+      Data_matrix[i,] <- t(mu + t(chol(Sigma)) %*% rt(p, 3))
+    }
+    for (i in 1:n){
+      #matrix with the vector Zi. Each row is a vector of p components
+      Data_matrix[i,] <- Data_matrix[i,] / norm(Data_matrix[i,], type= '2')
+    }
+    Tn <- 0               
+    for (i in 2:n){
+      for (j in 1:(i-1)){
+        Tn <- Tn + Data_matrix[i,] %*% Data_matrix[j,]
+      }
+    }  
+    Z_star <- 0
+    for (i in 1:n){
+      Z_star <- Z_star + Data_matrix[i,]
+    }
+    Z_star <- Z_star / (n - 2)
+    Matrix_Zj_ZjT <- matrix(0, nrow = p, ncol = p)
+    for (i in 1:n){
+      Matrix_Zj_ZjT <- Matrix_Zj_ZjT + Data_matrix[i,] %*% t(Data_matrix[i,])
+    }
+    Tr_B <- -n/(n - 2)**2 + ((n-1)/(n*(n-2)**2))* tr(Matrix_Zj_ZjT %*% Matrix_Zj_ZjT) +
+      ((1-2*n)/(n*(n-1))) * (Z_star %*% Matrix_Zj_ZjT %*% Z_star) + 
+      (2/n) * norm(Z_star, type = '2')**2 + (((n-2)**2)/(n*(n-1))) * norm(Z_star, type = '2')**4
+    Tn_normalized <- Tn/((0.5*n*(n-1)*Tr_B)**0.5)
+    dat <- append(dat, Tn_normalized)
+  }
+  N_col <- length(dat)
+  std <- sd(dat)
+  power <- 0
+  for (j in dat){
+    Tn <- j
+    p <- (1-pnorm(Tn, 0, std/sqrt(N_col))) * 2
+    if (p < alpha){
+      power <- power + 1
+    }
+  }
+  power <- power / N_col
+  print('power is')
+  return(power)
+}
+#
 #PART testing stuff, don't pay attention ----
+
+# DIRECT Power_test   /!\ alpha = 0.975
+Power_test <- function (Matrix_input, Null_Hypo, alpha){
+  power_vector <- c()
+  N_row <- nrow(Matrix_input)
+  N_col <- ncol(Matrix_input)
+  for (i in 1:N_row){
+    std <- sd(Matrix_input[i,])
+    power <- 0
+    for (j in 1:N_col){
+      Tn <- mean(Matrix_input[i,])
+      error <- qnorm(alpha)*(std/sqrt(N_col))
+      left <- Null_Hypo - error
+      right <- Null_Hypo + error
+      Zleft <- (left - Tn)/(std/sqrt(N_col))
+      Zright <-(right - Tn)/(std/sqrt(N_col))
+      p <- pnorm(Zright)-pnorm(Zleft)
+      power <- (1-p) +  power
+    }
+    power <- power / N_col
+    power_vector <- append(power_vector, power)
+  }
+  return(power_vector)
+}
+
+
 x <- seq(0,0.30,by=0.01)
 ggplot(data.frame(x=x, cumulative=pnorm(-1.96 + sqrt(16*1*1)*x,0,1)), aes(x,cumulative))+geom_line()+ggtitle('Cumulative distribution function of standard normal')
 
